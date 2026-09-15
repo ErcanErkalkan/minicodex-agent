@@ -1,0 +1,52 @@
+name: Publish staged MiniCodex tests and CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bootstrap-tests-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Rebuild verified archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .github/bootstrap/tests_ci.part00 \
+              .github/bootstrap/tests_ci.part01 \
+              .github/bootstrap/tests_ci.part02 \
+              .github/bootstrap/tests_ci.part03 \
+              .github/bootstrap/tests_ci.part04 \
+              .github/bootstrap/tests_ci.part05 \
+              .github/bootstrap/tests_ci.part06 \
+              .github/bootstrap/tests_ci.part07 \
+            | base64 -d > /tmp/minicodex-tests-ci.tar.xz
+          echo "6eae304a26966dc8db7e5e41d6485ec027d68a2b295392f5f9074a94f0b452d1  /tmp/minicodex-tests-ci.tar.xz" | sha256sum -c -
+
+      - name: Publish tests, examples and project CI
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -xJf /tmp/minicodex-tests-ci.tar.xz -C .
+          rm -rf .github/bootstrap
+          rm -f .github/workflows/bootstrap-tests-ci.yml
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+            exit 0
+          fi
+          git commit -m "test: publish MiniCodex v4.4.23 tests and CI"
+          git push origin HEAD:main
