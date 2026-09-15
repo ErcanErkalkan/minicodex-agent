@@ -1,6 +1,3 @@
-import json
-from pathlib import Path
-
 from scripts.p0_6_swebench_preflight import _validate_manifest
 
 
