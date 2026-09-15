@@ -1,3 +1,4 @@
+# Retry after verified chunk repair
 name: Publish staged MiniCodex tests and CI
 
 on:
