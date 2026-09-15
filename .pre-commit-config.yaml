@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.0
+    hooks:
+      - id: ruff
+        args: ["check", "."]
+      - id: ruff-format
+  - repo: local
+    hooks:
+      - id: python-syntax-check
+        name: bytecode-free Python syntax check
+        entry: python scripts/check_python_syntax.py src tests scripts
+        language: system
+        pass_filenames: false
+      - id: bounded-fast-test-matrix
+        name: bounded fast marker-aware test matrix
+        entry: python scripts/run_test_matrix.py --group fast --max-files 12 --json
+        language: system
+        pass_filenames: false

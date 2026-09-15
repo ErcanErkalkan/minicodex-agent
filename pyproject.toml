@@ -1,0 +1,96 @@
+[build-system]
+requires = ["setuptools>=77.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minicodex-agent"
+version = "4.4.23"
+description = "Developer-preview local Codex-like coding-agent framework with provider abstraction, context management, sandboxing, structured tools, evals, telemetry, product security, and final readiness gates."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  { name = "Ercan Erkalkan", email = "ercan.erkalkan@gmail.com" }
+]
+dependencies = [
+  "openai>=2.0.0",
+  "python-dotenv>=1.0.1"
+]
+
+keywords = ["coding-agent", "llm", "developer-tools", "automation", "code-search", "cli"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development",
+  "Topic :: Software Development :: Code Generators",
+  "Topic :: Software Development :: Quality Assurance",
+]
+
+[project.urls]
+Homepage = "https://github.com/ercanerkalkan/minicodex-agent"
+Repository = "https://github.com/ercanerkalkan/minicodex-agent"
+Issues = "https://github.com/ercanerkalkan/minicodex-agent/issues"
+Documentation = "https://github.com/ercanerkalkan/minicodex-agent#readme"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
+  "coverage>=7.0.0",
+  "ruff>=0.6.0",
+  "mypy>=1.11.0",
+  "build>=1.2.0",
+  "twine>=5.1.0"
+]
+
+[project.scripts]
+minicodex = "minicodex_agent.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+  "unit: Fast, in-process unit tests with no subprocess/sandbox dependency.",
+  "integration: Cross-module tests or realistic tool/agent workflow tests.",
+  "subprocess: Tests that spawn subprocesses, git, pytest, or command runner helpers.",
+  "sandbox: Tests that exercise sandbox/workspace isolation or command policy boundaries.",
+  "slow: Tests that can be slower or more variable in constrained CI environments.",
+]
+
+[tool.coverage.run]
+source = ["src/minicodex_agent"]
+omit = [
+  "src/minicodex_agent/__init__.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+fail_under = 85
+exclude_lines = [
+  "pragma: no cover",
+  "if TYPE_CHECKING:",
+  "if __name__ == .__main__.:",
+]
+
+[tool.mypy]
+python_version = "3.10"
+packages = ["minicodex_agent"]
+ignore_missing_imports = true
+warn_unused_configs = true
+no_strict_optional = true
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
