@@ -98,9 +98,7 @@ def _validate_manifest(raw: dict[str, Any]) -> dict[str, Any]:
 
         missing = sorted(key for key in required if not task.get(key))
         if missing:
-            problems.append(
-                f"{task.get('instance_id', index)} missing: {', '.join(missing)}"
-            )
+            problems.append(f"{task.get('instance_id', index)} missing: {', '.join(missing)}")
 
         instance_id = str(task.get("instance_id", ""))
         if instance_id in ids:
