@@ -188,9 +188,7 @@ class HardwareRunSampler:
         if memory is not None:
             used = float(memory["used_mb"])
             self.peak_system_used_mb = (
-                used
-                if self.peak_system_used_mb is None
-                else max(self.peak_system_used_mb, used)
+                used if self.peak_system_used_mb is None else max(self.peak_system_used_mb, used)
             )
 
         gpu_rows, gpu_error = sample_nvidia_gpus()
