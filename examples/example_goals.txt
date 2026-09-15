@@ -1,0 +1,63 @@
+MiniCodex example goals
+======================
+
+Basic project analysis:
+minicodex "Projeyi incele, plan çıkar, testleri çalıştır ve gerekiyorsa düzelt." --root .
+
+Safe dry-run:
+minicodex "Projeyi analiz et, kod haritası çıkar, hata risklerini söyle ama dosya değiştirme." --root . --dry-run --safety-profile strict
+
+Snapshot-backed fix:
+minicodex "Önce snapshot oluştur, sonra failing testleri analiz et ve minimal düzeltme yap." --root . --max-steps 60
+
+Use task memory:
+minicodex "Önce görev hafızasını oku, sonra yarım kalan refactor işini devam ettir." --root .
+
+Generate commit message:
+minicodex "Mevcut değişiklikler için commit mesajı taslağı oluştur." --root .
+
+GitHub draft PR preparation:
+minicodex "Bu değişiklikler için GitHub draft PR komutu ve checklist hazırla." --root .
+
+Python symbol rename:
+minicodex "UserService sembolünü AccountService olarak yeniden adlandırmadan önce preview çıkar, uygunsa uygula ve testleri çalıştır." --root .
+
+Config validation:
+minicodex "pyproject.toml ve .env.example dosyalarını doğrula, sorun varsa minimal düzeltme öner." --root .
+
+Interactive mode:
+minicodex --interactive --root .
+
+Secret scan before sharing changes:
+minicodex "Önce scan_secrets çalıştır, sonra mevcut değişiklikler için güvenli PR özeti hazırla." --root .
+
+Task queue:
+minicodex "Bu büyük refactor işini küçük görevler halinde task queue içine ekle ve ilk görevi seç." --root .
+
+Rollback policy check:
+minicodex "Mevcut değişiklikleri check_rollback_policy ile değerlendir, riskliyse snapshot öner." --root .
+
+Project config and policy:
+minicodex "init_project_config ve init_project_policy çalıştır; sonra config ve policy dosyalarını oku." --root .
+minicodex "check_project_policy ile .env yazma, src/app.py yazma ve pytest -q komutunu kontrol et." --root .
+
+Plugin manifest inspection:
+minicodex "validate_plugins çalıştır, enabled_tools listesini göster ve filesystem pluginini inspect_plugin ile incele." --root .
+
+Multi-agent style planning:
+minicodex "Bu büyük refactor işini plan_multi_agent_work ile rollere böl." --root .
+minicodex "run_task_batch ile analiz, düzeltme, test ve review görevlerini dry-run olarak planla." --root .
+
+Terminal session:
+minicodex "Git status ve pytest -q komutlarını run_terminal_session ile tek oturumda çalıştır ve oturum logunu listele." --root .
+
+Tool discovery:
+minicodex "run_tests aracının argümanlarını tool_help ile göster." --root .
+
+v1.0 onboarding / release goals
+-------------------------------
+Run setup wizard for this repository, then show project health report.
+Create a safe demo project named minicodex-demo.
+Build a release checklist for version 1.0.0.
+Write release notes for version 1.0.0.
+Inspect project health, scan secrets, review change set, and prepare a PR summary.
