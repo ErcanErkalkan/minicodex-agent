@@ -1,4 +1,4 @@
-# Retry after verified chunk repair
+# Publish tests/examples only; workflow/config files are installed separately.
 name: Publish staged MiniCodex tests and CI
 
 on:
@@ -34,20 +34,19 @@ jobs:
             | base64 -d > /tmp/minicodex-tests-ci.tar.xz
           echo "6eae304a26966dc8db7e5e41d6485ec027d68a2b295392f5f9074a94f0b452d1  /tmp/minicodex-tests-ci.tar.xz" | sha256sum -c -
 
-      - name: Publish tests, examples and project CI
+      - name: Publish tests and examples
         shell: bash
         run: |
           set -euo pipefail
-          tar -xJf /tmp/minicodex-tests-ci.tar.xz -C .
+          tar -xJf /tmp/minicodex-tests-ci.tar.xz -C . tests examples
           rm -rf .github/bootstrap
-          rm -f .github/workflows/bootstrap-tests-ci.yml
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+          git add -A tests examples .github/bootstrap
           if git diff --cached --quiet; then
             echo "No changes to publish."
             exit 0
           fi
-          git commit -m "test: publish MiniCodex v4.4.23 tests and CI"
+          git commit -m "test: publish MiniCodex v4.4.23 tests and examples"
           git push origin HEAD:main
