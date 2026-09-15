@@ -1,0 +1,37 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build tools
+        run: python -m pip install -e ".[dev]"
+      - name: Ruff lint
+        run: ruff check .
+      - name: Ruff format check
+        run: ruff format --check .
+      - name: Mypy type check
+        run: mypy src/minicodex_agent
+      - name: Run marker-aware test matrix
+        run: |
+          python scripts/run_test_matrix.py --group fast --json
+          python scripts/run_test_matrix.py --group integration --json
+          python scripts/run_test_matrix.py --group subprocess --json
+          python scripts/run_test_matrix.py --group sandbox --json
+      - name: Run file-level coverage gate after matrix
+        run: python scripts/run_coverage_gate.py --group all --fail-under 85 --json
+      - name: Build package
+        run: python -m build
+      - name: Check artifacts
+        run: twine check dist/*
+      # Publishing intentionally omitted. Add PyPI trusted publishing only after human review.
