@@ -36,7 +36,9 @@ def validate_oracle_smoke(
     if not isinstance(tasks, list) or not tasks:
         raise ValueError("manifest must contain a non-empty tasks list")
 
-    expected = [str(task.get("instance_id", "")).strip() for task in tasks if isinstance(task, dict)]
+    expected = [
+        str(task.get("instance_id", "")).strip() for task in tasks if isinstance(task, dict)
+    ]
     if not all(expected) or len(set(expected)) != len(expected):
         raise ValueError("manifest instance_id values must be non-empty and unique")
 
