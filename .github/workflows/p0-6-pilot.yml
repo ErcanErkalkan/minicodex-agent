@@ -1,6 +1,16 @@
 name: P0-6 Pilot
 
 on:
+  pull_request:
+    paths:
+      - ".github/workflows/p0-6-pilot.yml"
+      - "research/p0_6/**"
+      - "scripts/p0_6_*.py"
+      - "scripts/run_with_hardware_telemetry.py"
+      - "src/minicodex_agent/safety.py"
+      - "tests/test_p0_6_*.py"
+      - "tests/test_pilot_hardware_monitor.py"
+      - "tests/test_safety.py"
   workflow_dispatch:
     inputs:
       phase:
@@ -62,6 +72,7 @@ jobs:
           PY
 
   self-hosted-preflight:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
     needs: repository-qa
     runs-on: [self-hosted, linux, x64, minicodex-pilot]
     timeout-minutes: 30
@@ -88,7 +99,7 @@ jobs:
           if-no-files-found: error
 
   oracle-smoke:
-    if: ${{ inputs.phase == 'oracle-smoke' }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.phase == 'oracle-smoke' }}
     needs: self-hosted-preflight
     runs-on: [self-hosted, linux, x64, minicodex-pilot]
     timeout-minutes: 360
