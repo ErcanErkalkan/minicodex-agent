@@ -1,0 +1,83 @@
+name: Publish staged MiniCodex source
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/bootstrap-source.yml"
+      - ".bootstrap/minicodex-source.tar.xz.b64"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check staged bundle
+        id: staged
+        shell: bash
+        run: |
+          if [[ -f .bootstrap/minicodex-source.tar.xz.b64 ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "Bootstrap bundle already consumed; nothing to publish."
+          fi
+
+      - name: Decode and verify source bundle
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d .bootstrap/minicodex-source.tar.xz.b64 > /tmp/minicodex-source.tar.xz
+          echo "b87be2dcbf25ff939b33143e9dd4f1d0d88aee19d81f7d51859f58487f3b9b3e  /tmp/minicodex-source.tar.xz" | sha256sum -c -
+
+      - name: Extract source tree
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          tar -xJf /tmp/minicodex-source.tar.xz -C .
+
+      - name: Verify Python syntax and registry integrity
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        env:
+          PYTHONPATH: src
+        run: |
+          set -euo pipefail
+          python -m compileall -q src scripts
+          python - <<'PY'
+          import minicodex_agent
+          from minicodex_agent.action_schema import ACTION_SPECS
+          from minicodex_agent.tool_registry import get_tool_registry
+
+          assert minicodex_agent.__version__ == "4.4.23"
+          registry = get_tool_registry()
+          assert set(ACTION_SPECS) == set(registry)
+          print(f"MiniCodex bootstrap verification OK: version={minicodex_agent.__version__}, actions={len(ACTION_SPECS)}")
+          PY
+
+      - name: Consume bootstrap bundle
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: rm -rf .bootstrap
+
+      - name: Commit published source
+        if: steps.staged.outputs.present == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git status --short
+          git commit -m "feat: publish MiniCodex Agent v4.4.23 source"
+          git push origin HEAD:main
