@@ -397,7 +397,10 @@ def test_model_client_retries_then_succeeds() -> None:
 
 
 def test_package_build_metadata_is_valid_for_ci_build_step() -> None:
-    import tomllib
+    try:
+        import tomllib
+    except ModuleNotFoundError:
+        import tomli as tomllib
 
     project_root = Path(__file__).resolve().parents[1]
     data = tomllib.loads((project_root / "pyproject.toml").read_text(encoding="utf-8"))

@@ -1,0 +1,175 @@
+name: P0-6 Pilot
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/p0-6-pilot.yml"
+      - "research/p0_6/**"
+      - "scripts/p0_6_*.py"
+      - "scripts/run_with_hardware_telemetry.py"
+      - "src/minicodex_agent/safety.py"
+      - "tests/test_p0_6_*.py"
+      - "tests/test_pilot_hardware_monitor.py"
+      - "tests/test_safety.py"
+  workflow_dispatch:
+    inputs:
+      phase:
+        description: Pilot gate to run
+        required: true
+        default: preflight
+        type: choice
+        options:
+          - preflight
+          - oracle-smoke
+      max_workers:
+        description: SWE-bench worker count for oracle smoke
+        required: true
+        default: "2"
+      timeout_seconds:
+        description: Per-instance SWE-bench timeout
+        required: true
+        default: "1800"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: p0-6-pilot-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  PILOT_MANIFEST: research/p0_6/PILOT_TASK_MANIFEST_20260915_v0_1.json
+  SWEBENCH_COMMIT: 02e7a74ffd0b707aab73d203fe87bdc7c76afc8e
+
+jobs:
+  repository-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install MiniCodex development dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: P0-6 unit tests
+        run: >-
+          python -m pytest -q
+          tests/test_p0_6_swebench_preflight.py
+          tests/test_p0_6_noop_predictions.py
+          tests/test_p0_6_oracle_smoke_validation.py
+          tests/test_pilot_hardware_monitor.py
+      - name: Validate pilot manifest only
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          from scripts.p0_6_swebench_preflight import _validate_manifest
+
+          path = Path("research/p0_6/PILOT_TASK_MANIFEST_20260915_v0_1.json")
+          result = _validate_manifest(json.loads(path.read_text(encoding="utf-8")))
+          print(json.dumps(result, indent=2))
+          raise SystemExit(0 if result["ok"] and result["task_count"] == 10 else 2)
+          PY
+
+  self-hosted-preflight:
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+    needs: repository-qa
+    runs-on: [self-hosted, linux, x64, minicodex-pilot]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install MiniCodex and pinned SWE-bench
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pip install "git+https://github.com/SWE-bench/SWE-bench.git@${SWEBENCH_COMMIT}"
+      - name: P0-6 host preflight
+        run: |
+          mkdir -p artifacts/p0-6
+          python scripts/p0_6_swebench_preflight.py \
+            --manifest "${PILOT_MANIFEST}" \
+            --json-out artifacts/p0-6/preflight.json
+      - name: Upload preflight evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-6-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/p0-6/preflight.json
+          if-no-files-found: error
+
+  oracle-smoke:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.phase == 'oracle-smoke' }}
+    needs: self-hosted-preflight
+    runs-on: [self-hosted, linux, x64, minicodex-pilot]
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install MiniCodex and pinned SWE-bench
+        run: |
+          python -m pip install -e ".[dev]"
+          python -m pip install "git+https://github.com/SWE-bench/SWE-bench.git@${SWEBENCH_COMMIT}"
+      - name: Preflight again on execution host
+        run: |
+          mkdir -p artifacts/p0-6
+          python scripts/p0_6_swebench_preflight.py \
+            --manifest "${PILOT_MANIFEST}" \
+            --json-out artifacts/p0-6/preflight-oracle-host.json
+      - name: Create base-oracle probe predictions and instance list
+        id: manifest
+        shell: bash
+        run: |
+          python scripts/p0_6_make_noop_predictions.py \
+            --manifest "${PILOT_MANIFEST}" \
+            --output artifacts/p0-6/base-oracle-predictions.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          manifest = Path("research/p0_6/PILOT_TASK_MANIFEST_20260915_v0_1.json")
+          tasks = json.loads(manifest.read_text(encoding="utf-8"))["tasks"]
+          print("instance_ids=" + " ".join(task["instance_id"] for task in tasks))
+          PY
+      - name: Base-oracle smoke (expected unresolved)
+        run: |
+          RUN_ID="p0-6-base-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python scripts/run_with_hardware_telemetry.py \
+            --output artifacts/p0-6/base-hardware.json -- \
+            python -m swebench.harness.run_evaluation \
+              --dataset_name princeton-nlp/SWE-bench_Verified \
+              --predictions_path artifacts/p0-6/base-oracle-predictions.json \
+              --max_workers "${{ inputs.max_workers }}" \
+              --timeout "${{ inputs.timeout_seconds }}" \
+              --instance_ids ${{ steps.manifest.outputs.instance_ids }} \
+              --run_id "$RUN_ID"
+          cp -R "logs/evaluation/$RUN_ID" artifacts/p0-6/base-evaluation
+      - name: Gold smoke (expected resolved)
+        run: |
+          RUN_ID="p0-6-gold-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          python scripts/run_with_hardware_telemetry.py \
+            --output artifacts/p0-6/gold-hardware.json -- \
+            python -m swebench.harness.run_evaluation \
+              --dataset_name princeton-nlp/SWE-bench_Verified \
+              --predictions_path gold \
+              --max_workers "${{ inputs.max_workers }}" \
+              --timeout "${{ inputs.timeout_seconds }}" \
+              --instance_ids ${{ steps.manifest.outputs.instance_ids }} \
+              --run_id "$RUN_ID"
+          cp -R "logs/evaluation/$RUN_ID" artifacts/p0-6/gold-evaluation
+      - name: Validate paired base/gold oracle smoke
+        run: |
+          python scripts/p0_6_validate_oracle_smoke.py \
+            --manifest "${PILOT_MANIFEST}" \
+            --base-root artifacts/p0-6/base-evaluation \
+            --gold-root artifacts/p0-6/gold-evaluation \
+            --json-out artifacts/p0-6/oracle-smoke-validation.json
+      - name: Upload oracle-smoke evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: p0-6-oracle-smoke-${{ github.run_id }}-${{ github.run_attempt }}
+          path: artifacts/p0-6
+          if-no-files-found: error

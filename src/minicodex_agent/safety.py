@@ -42,6 +42,8 @@ STRICT_ALLOWED_COMMAND_PATTERNS = [
     r"^pytest(\s|$)",
     r"^python\s+-m\s+pytest(\s|$)",
     r"^python3\s+-m\s+pytest(\s|$)",
+    r"^python\s+-m\s+py_compile(\s|$)",
+    r"^python3\s+-m\s+py_compile(\s|$)",
     r"^ruff\s+check(\s|$)",
     r"^mypy(\s|$)",
     r"^npm\s+(test|run\s+(test|build|lint))(\s|$)",
@@ -300,7 +302,7 @@ def command_risk_label(command: str) -> str:
         return "high: destructive/system command"
     if any(
         token in normalized
-        for token in ["pytest", "test", "lint", "build", "git diff", "git status"]
+        for token in ["pytest", "py_compile", "test", "lint", "build", "git diff", "git status"]
     ):
         return "low: check/test/build command"
     return "unknown: review carefully"

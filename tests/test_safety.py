@@ -31,6 +31,11 @@ def test_strict_allows_pytest():
     assert unsafe_command_reason("python -m pytest -q", profile="strict") is None
 
 
+def test_strict_allows_python_py_compile():
+    assert unsafe_command_reason("python -m py_compile app.py", profile="strict") is None
+    assert command_risk_label("python -m py_compile app.py").startswith("low")
+
+
 def test_command_risk_labels_install_as_high():
     assert command_risk_label("pip install requests").startswith("high")
 
